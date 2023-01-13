@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  client:
+    image: node:buster-slim
+    # build: 
+    #   context: ./client
+    #   dockerfile: dockerfile
+    volumes:
+      - .:/workspace:cached
+
+    # entrypoint: "cd /workspace/client"
+    # command: "cd /workspace/client; npm install; npm run dev"  
+
+    #   # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    # # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    # network_mode: service:api
+
+    #   # Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    #   # user: root
+
+    #   # Use "forwardPorts" in **devcontainer.json** to forward an app port locally. 
+    #   # (Adding the "ports" property to this file will not forward from a Codespace.)
+    depends_on:
+      - api
+    networks:
+      - frontend
+
+  api:
+
+    image: node:buster-slim
+    # build:
+    #   context: ./api
+    #   dockerfile: Dockerfile
+
+    volumes:
+      - .:/workspace:cached
+
+    working_dir: /workspace/api
+    command: bash -c "npm install && sleep infinity"
+    # command: bash -c "npm install && npm run dev"
+
+    networks:
+      - backend
+      - frontend
+
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+
+    # Uncomment to change startup options
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: database
+    # Add "forwardPorts": ["27017"] to **devcontainer.json** to forward MongoDB locally.
+    # (Adding the "ports" property to this file will not forward from a Codespace.)
+    networks:
+      - backend
+    ports:
+      - '27017:27017'
+
+  mongo-express:
+    image: mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD}
+    depends_on:
+      - mongo
+    networks:
+      - backend
+    ports:
+      - '8081:8081'
+volumes:
+  mongodb-data:
+
+
+networks:
+  frontend:
+  backend:
